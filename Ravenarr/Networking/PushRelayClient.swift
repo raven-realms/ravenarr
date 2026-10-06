@@ -30,10 +30,13 @@ enum PushRelayClient {
         let platform = "ios"
     }
 
-    static func registerDevice(relayURL: URL, deviceToken: String, seerrUserEmail: String, seerrServerURL: URL) async throws {
+    static func registerDevice(relayURL: URL, apiKey: String?, deviceToken: String, seerrUserEmail: String, seerrServerURL: URL) async throws {
         var request = URLRequest(url: relayURL.appendingPathComponent("devices"))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let apiKey, !apiKey.isEmpty {
+            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        }
         request.httpBody = try JSONEncoder().encode(
             RegisterDeviceBody(deviceToken: deviceToken, seerrUserEmail: seerrUserEmail, seerrServerURL: seerrServerURL.absoluteString)
         )

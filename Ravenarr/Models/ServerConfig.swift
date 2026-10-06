@@ -43,6 +43,23 @@ struct ServerConfig: Codable, Identifiable, Equatable {
     /// so switching servers never mixes up credentials.
     var keychainAccount: String { id.uuidString }
 
+    static let relayAPIKeyKeychainService = "com.seerrclient.pushRelayAPIKey"
+
+    /// Bearer token sent to the relay on every request — the actual "pay to
+    /// unlock" mechanism if you sell access to a hosted relay (issued on an
+    /// external signup site, pasted in here). A credential, so Keychain,
+    /// not the plain UserDefaults blob the rest of this struct lives in.
+    var pushRelayAPIKey: String? {
+        get { KeychainHelper.readString(service: Self.relayAPIKeyKeychainService, account: keychainAccount) }
+        nonmutating set {
+            if let newValue {
+                KeychainHelper.saveString(newValue, service: Self.relayAPIKeyKeychainService, account: keychainAccount)
+            } else {
+                KeychainHelper.delete(service: Self.relayAPIKeyKeychainService, account: keychainAccount)
+            }
+        }
+    }
+
     private enum CodingKeys: String, CodingKey {
         case id, baseURL, nickname, serverKind, apiVersion, pushRelayURL, allowSelfSignedCertificate
     }
@@ -105,6 +122,7 @@ final class ServerStore: ObservableObject {
     func remove(_ server: ServerConfig) {
         servers.removeAll { $0.id == server.id }
         KeychainHelper.delete(service: SeerrAPIClient.sessionKeychainService, account: server.keychainAccount)
+        KeychainHelper.delete(service: ServerConfig.relayAPIKeyKeychainService, account: server.keychainAccount)
         if activeServerID == server.id {
             activeServerID = servers.first?.id
         }

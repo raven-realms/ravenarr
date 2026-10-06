@@ -90,6 +90,14 @@ final class AppState: ObservableObject {
         Task { await registerPushTokenIfPossible() }
     }
 
+    /// Keychain-backed (see ServerConfig.pushRelayAPIKey) — no ServerStore
+    /// update/persist needed, setting it writes straight through.
+    func setPushRelayAPIKey(_ key: String?) {
+        guard let server = serverStore.activeServer else { return }
+        server.pushRelayAPIKey = key
+        Task { await registerPushTokenIfPossible() }
+    }
+
     /// No-ops silently if any piece (relay URL, device token, signed-in user,
     /// or the user's email) is missing yet — called opportunistically from
     /// multiple places. Email, not a numeric id, because Overseerr's webhook
@@ -103,6 +111,7 @@ final class AppState: ObservableObject {
         do {
             try await PushRelayClient.registerDevice(
                 relayURL: relayURL,
+                apiKey: server.pushRelayAPIKey,
                 deviceToken: token,
                 seerrUserEmail: email,
                 seerrServerURL: server.baseURL
