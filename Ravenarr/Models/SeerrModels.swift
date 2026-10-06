@@ -78,6 +78,9 @@ struct MediaDetails: Decodable {
     let posterPath: String?
     let releaseDate: String?
     let firstAirDate: String?
+    /// TMDB's 0-10 average rating. Shown on the detail screen, same as the web UI.
+    let voteAverage: Double?
+    let mediaInfo: MediaInfo?
 
     var displayTitle: String { title ?? name ?? "Untitled" }
     var displayDate: String? { releaseDate ?? firstAirDate }
@@ -86,6 +89,29 @@ struct MediaDetails: Decodable {
         guard let posterPath else { return nil }
         return URL(string: "https://image.tmdb.org/t/p/w342\(posterPath)")
     }
+}
+
+/// Lighter than `MediaResult` on purpose: /movie|tv/{id}/recommendations
+/// doesn't include `mediaType` (it's implicit — a movie's recommendations
+/// are always movies), so this can't reuse MediaResult's non-optional field.
+struct RelatedMediaItem: Decodable, Identifiable {
+    let id: Int
+    let title: String?
+    let name: String?
+    let overview: String?
+    let posterPath: String?
+    let releaseDate: String?
+    let firstAirDate: String?
+
+    var displayTitle: String { title ?? name ?? "Untitled" }
+    var posterURL: URL? {
+        guard let posterPath else { return nil }
+        return URL(string: "https://image.tmdb.org/t/p/w342\(posterPath)")
+    }
+}
+
+struct RelatedMediaPage: Decodable {
+    let results: [RelatedMediaItem]
 }
 
 struct TVSeasonSummary: Decodable {
