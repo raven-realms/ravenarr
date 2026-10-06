@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ravenarr Privacy Policy</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 680px; margin: 0 auto; padding: 32px 20px 80px; line-height: 1.6; color: #1a1a1a; background: #fff; }
+  h1 { font-size: 1.6em; }
+  h2 { font-size: 1.15em; margin-top: 2em; }
+  code { background: #f0f0f0; padding: 2px 5px; border-radius: 4px; font-size: 0.9em; }
+  .updated { color: #666; font-size: 0.9em; }
+</style>
+</head>
+<body>
+<h1>Ravenarr Privacy Policy</h1>
+<p class="updated">Last updated: October 2026</p>
+
+<p>
+Ravenarr is a client app for your own self-hosted Overseerr or Jellyseerr
+server. It has no backend of its own, collects no analytics, and no data
+passes through any server operated by the app's developers.
+</p>
+
+<h2>What the app stores, and where</h2>
+<ul>
+  <li><strong>Server address</strong> you enter — stored locally on your
+  device (UserDefaults).</li>
+  <li><strong>Session credentials</strong> (the cookie returned after you
+  sign in with Plex, Jellyfin/Emby, or a local account) — stored in your
+  device's Keychain, never transmitted anywhere except the server you
+  configured.</li>
+  <li><strong>Plex sign-in</strong> happens entirely between your device and
+  Plex's own servers (plex.tv) using Plex's standard PIN login flow. The
+  resulting token is then sent only to the Overseerr/Jellyseerr server you
+  specified, to establish your session there.</li>
+</ul>
+
+<h2>Push notifications (optional)</h2>
+<p>
+If you enable push notifications and configure a relay URL, your device's
+APNs push token and your Seerr user ID are sent to <em>that relay</em> — a
+service you choose to run yourself, not one operated by this app's
+developers. See the project README for what that relay does with it.
+</p>
+
+<h2>What we don't do</h2>
+<p>
+No third-party analytics or advertising SDKs. No data is sold, shared, or
+sent to any server other than the one you explicitly configured.
+</p>
+
+<h2>Contact</h2>
+<p>
+Questions or concerns: open an issue on the
+<a href="https://github.com/raven-realms">Raven Realms GitHub</a>.
+</p>
+</body>
+</html>
