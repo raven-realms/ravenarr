@@ -29,6 +29,10 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: Ravenarr
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: ""
-        CODE_SIGN_ENTITLEMENTS: Ravenarr/Ravenarr.entitlements
         SWIFT_EMIT_LOC_STRINGS: YES
         ENABLE_PREVIEWS: YES
+      configs:
+        Debug:
+          CODE_SIGN_ENTITLEMENTS: Ravenarr/Ravenarr.entitlements
+        Release:
+          CODE_SIGN_ENTITLEMENTS: Ravenarr/Ravenarr-Release.entitlements
