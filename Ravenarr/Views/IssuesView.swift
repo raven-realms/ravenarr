@@ -54,6 +54,9 @@ struct IssuesView: View {
             }
             .background(SeerrTheme.background.ignoresSafeArea())
             .navigationTitle("Issues")
+            .navigationDestination(for: MediaResult.self) { item in
+                MediaDetailView(item: item)
+            }
             .refreshable { await load() }
             .task { await load() }
             .onChange(of: filter) { _, _ in Task { await load() } }
@@ -97,6 +100,34 @@ private struct IssueRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
+            if let tmdbId = issue.media?.tmdbId {
+                NavigationLink(value: mediaResult(tmdbId: tmdbId)) {
+                    posterAndTitle
+                }
+                .buttonStyle(.plain)
+            } else {
+                posterAndTitle
+            }
+
+            Spacer()
+
+            if canManage {
+                Button {
+                    onDecision(issue.status == .open)
+                } label: {
+                    Image(systemName: issue.status == .open ? "checkmark.circle.fill" : "arrow.uturn.backward.circle.fill")
+                }
+                .tint(issue.status == .open ? .green : .orange)
+                .buttonStyle(.plain)
+                .font(.title2)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private var posterAndTitle: some View {
+        HStack(alignment: .top, spacing: 12) {
             AsyncImage(url: details?.posterURL) { image in
                 image.resizable().aspectRatio(2 / 3, contentMode: .fill)
             } placeholder: {
@@ -137,21 +168,21 @@ private struct IssueRow: View {
                         .foregroundStyle(.secondary)
                 }
             }
-
-            Spacer()
-
-            if canManage {
-                Button {
-                    onDecision(issue.status == .open)
-                } label: {
-                    Image(systemName: issue.status == .open ? "checkmark.circle.fill" : "arrow.uturn.backward.circle.fill")
-                }
-                .tint(issue.status == .open ? .green : .orange)
-                .buttonStyle(.plain)
-                .font(.title2)
-            }
         }
-        .padding(.vertical, 4)
+    }
+
+    private func mediaResult(tmdbId: Int) -> MediaResult {
+        MediaResult(
+            id: tmdbId,
+            mediaType: issue.media?.mediaType ?? .movie,
+            title: details?.title,
+            name: details?.name,
+            overview: details?.overview,
+            posterPath: details?.posterPath,
+            releaseDate: details?.releaseDate,
+            firstAirDate: details?.firstAirDate,
+            mediaInfo: nil
+        )
     }
 }
 

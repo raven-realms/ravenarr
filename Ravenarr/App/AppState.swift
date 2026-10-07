@@ -90,18 +90,30 @@ final class AppState: ObservableObject {
         Task { await registerPushTokenIfPossible() }
     }
 
-    /// No-ops silently if any piece (relay URL, device token, signed-in user) is
-    /// missing yet — this gets called opportunistically from multiple places.
+    /// Keychain-backed (see ServerConfig.pushRelayAPIKey) — no ServerStore
+    /// update/persist needed, setting it writes straight through.
+    func setPushRelayAPIKey(_ key: String?) {
+        guard let server = serverStore.activeServer else { return }
+        server.pushRelayAPIKey = key
+        Task { await registerPushTokenIfPossible() }
+    }
+
+    /// No-ops silently if any piece (relay URL, device token, signed-in user,
+    /// or the user's email) is missing yet — called opportunistically from
+    /// multiple places. Email, not a numeric id, because Overseerr's webhook
+    /// template only exposes `{{notifyuser_email}}` — there's no raw user id
+    /// to match on. A user with no email on file simply can't get push.
     func registerPushTokenIfPossible() async {
         guard let server = serverStore.activeServer,
               let relayURL = server.pushRelayURL,
               let token = PushNotificationManager.shared.deviceToken,
-              let user = currentUser else { return }
+              let email = currentUser?.email else { return }
         do {
             try await PushRelayClient.registerDevice(
                 relayURL: relayURL,
+                apiKey: server.pushRelayAPIKey,
                 deviceToken: token,
-                seerrUserId: user.id,
+                seerrUserEmail: email,
                 seerrServerURL: server.baseURL
             )
         } catch {

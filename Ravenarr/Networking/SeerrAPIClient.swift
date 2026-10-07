@@ -168,10 +168,18 @@ final class SeerrAPIClient {
     }
 
     /// Requests/issues only carry `tmdbId` — fetch the full title/poster/overview
-    /// for display, same as the web UI does per request card.
+    /// for display, same as the web UI does per request card. Also used by the
+    /// detail screen for rating + availability status.
     func mediaDetails(tmdbId: Int, mediaType: MediaType) async throws -> MediaDetails {
         let path = mediaType == .tv ? "api/v1/tv/\(tmdbId)" : "api/v1/movie/\(tmdbId)"
         return try await request(path: path)
+    }
+
+    /// "More like this" row on the detail screen, same as the web UI.
+    func recommendations(tmdbId: Int, mediaType: MediaType) async throws -> [RelatedMediaItem] {
+        let path = mediaType == .tv ? "api/v1/tv/\(tmdbId)/recommendations" : "api/v1/movie/\(tmdbId)/recommendations"
+        let page: RelatedMediaPage = try await request(path: path)
+        return page.results
     }
 
     // MARK: - Requests

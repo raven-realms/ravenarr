@@ -4,16 +4,30 @@ struct MediaDetailView: View {
     @EnvironmentObject var appState: AppState
     let item: MediaResult
 
+    @State private var details: MediaDetails?
+    @State private var recommendations: [RelatedMediaItem] = []
     @State private var isRequesting = false
     @State private var requestErrorMessage: String?
     @State private var requestSucceeded = false
     @State private var showRequestOptions = false
     @State private var collection: CollectionSummary?
 
+    /// Prefer the freshly-fetched details once they land; `item` is just the
+    /// instantly-available placeholder (from Discover/search, or a bare
+    /// tmdbId+mediaType pair from Requests/Issues).
+    private var posterURL: URL? { details?.posterURL ?? item.posterURL }
+    private var displayTitle: String { details?.displayTitle ?? item.displayTitle }
+    private var displayDate: String? { details?.displayDate ?? item.displayDate }
+    private var overview: String? { details?.overview ?? item.overview }
+    private var status: RequestStatus? {
+        let status = details?.mediaInfo?.status ?? item.mediaInfo?.status
+        return (status == .unknown) ? nil : status
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                AsyncImage(url: item.posterURL) { image in
+                AsyncImage(url: posterURL) { image in
                     image.resizable().aspectRatio(2/3, contentMode: .fit)
                 } placeholder: {
                     RoundedRectangle(cornerRadius: 12).fill(.gray.opacity(0.2))
@@ -22,16 +36,23 @@ struct MediaDetailView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .frame(maxWidth: .infinity)
 
-                Text(item.displayTitle)
+                Text(displayTitle)
                     .font(.title2.bold())
 
-                if let date = item.displayDate {
-                    Text(date)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                HStack(spacing: 12) {
+                    if let date = displayDate {
+                        Text(date)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    if let rating = details?.voteAverage, rating > 0 {
+                        Label(String(format: "%.1f", rating), systemImage: "star.fill")
+                            .font(.subheadline)
+                            .foregroundStyle(.yellow)
+                    }
                 }
 
-                if let overview = item.overview {
+                if let overview {
                     Text(overview)
                         .font(.body)
                 }
@@ -44,6 +65,10 @@ struct MediaDetailView: View {
                 }
 
                 requestSection
+
+                if !recommendations.isEmpty {
+                    recommendationsSection
+                }
             }
             .padding()
         }
@@ -59,14 +84,62 @@ struct MediaDetailView: View {
             }
         }
         .task {
-            guard item.mediaType == .movie else { return }
-            collection = try? await appState.apiClient?.movieCollection(tmdbId: item.id)
+            await loadDetails()
         }
     }
 
     @ViewBuilder
+    private var recommendationsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Recommendations")
+                .font(.headline)
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 12) {
+                    ForEach(recommendations) { related in
+                        NavigationLink(value: mediaResult(for: related)) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                AsyncImage(url: related.posterURL) { image in
+                                    image.resizable().aspectRatio(2/3, contentMode: .fill)
+                                } placeholder: {
+                                    RoundedRectangle(cornerRadius: 8).fill(.gray.opacity(0.2)).aspectRatio(2/3, contentMode: .fit)
+                                }
+                                .frame(width: 110, height: 165)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                                Text(related.displayTitle)
+                                    .font(.caption)
+                                    .foregroundStyle(.white)
+                                    .lineLimit(2)
+                                    .frame(width: 110, alignment: .leading)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+        .padding(.top, 8)
+    }
+
+    /// A recommended item is always the same media type as the thing you're
+    /// looking at — the endpoint doesn't say so explicitly, so we supply it.
+    private func mediaResult(for related: RelatedMediaItem) -> MediaResult {
+        MediaResult(
+            id: related.id,
+            mediaType: item.mediaType,
+            title: related.title,
+            name: related.name,
+            overview: related.overview,
+            posterPath: related.posterPath,
+            releaseDate: related.releaseDate,
+            firstAirDate: related.firstAirDate,
+            mediaInfo: nil
+        )
+    }
+
+    @ViewBuilder
     private var requestSection: some View {
-        if let status = item.mediaInfo?.status, status != .unknown {
+        if let status {
             Label(status.label, systemImage: iconForStatus(status))
                 .padding(.top, 8)
         } else if requestSucceeded {
@@ -104,6 +177,29 @@ struct MediaDetailView: View {
         case .pending: return "clock.fill"
         case .unknown: return "questionmark.circle"
         }
+    }
+
+    private func fetchDetails(client: SeerrAPIClient) async -> MediaDetails? {
+        try? await client.mediaDetails(tmdbId: item.id, mediaType: item.mediaType)
+    }
+
+    private func fetchRecommendations(client: SeerrAPIClient) async -> [RelatedMediaItem] {
+        (try? await client.recommendations(tmdbId: item.id, mediaType: item.mediaType)) ?? []
+    }
+
+    private func fetchCollection(client: SeerrAPIClient) async -> CollectionSummary? {
+        guard item.mediaType == .movie else { return nil }
+        return try? await client.movieCollection(tmdbId: item.id)
+    }
+
+    private func loadDetails() async {
+        guard let client = appState.apiClient else { return }
+        async let detailsResult = fetchDetails(client: client)
+        async let recommendationsResult = fetchRecommendations(client: client)
+        async let collectionResult = fetchCollection(client: client)
+        details = await detailsResult
+        recommendations = await recommendationsResult
+        collection = await collectionResult
     }
 
     private func sendRequest(seasons: [Int]?, is4k: Bool) async {

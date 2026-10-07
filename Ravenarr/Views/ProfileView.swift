@@ -4,6 +4,7 @@ struct ProfileView: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject private var pushManager = PushNotificationManager.shared
     @State private var relayURLText = ""
+    @State private var relayAPIKeyText = ""
     @State private var showAddServer = false
 
     var body: some View {
@@ -69,17 +70,38 @@ struct ProfileView: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
 
-                    Button("Save Relay URL") {
+                    SecureField("Relay API Key (if required)", text: $relayAPIKeyText)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+
+                    Button("Save Relay Settings") {
                         appState.setPushRelayURL(URL(string: relayURLText))
+                        appState.setPushRelayAPIKey(relayAPIKeyText.isEmpty ? nil : relayAPIKeyText)
                     }
                     .disabled(relayURLText.trimmingCharacters(in: .whitespaces).isEmpty)
 
-                    Text("Address of your own relay that forwards Seerr's webhook events to Apple Push. Leave blank if you haven't set one up yet.")
+                    Text("Address of a relay that forwards Seerr's webhook events to Apple Push — your own self-hosted one, or a key you were issued for a hosted service. Leave both blank if you haven't set one up yet.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
 
+                    if appState.serverStore.activeServer?.pushRelayAPIKey != nil {
+                        Text("A relay API key is saved for this server.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
                     if let error = pushManager.registrationError {
                         Text(error).font(.footnote).foregroundStyle(.red)
+                    }
+                }
+
+                Section("Support Ravenarr") {
+                    // Plain external link, not an in-app payment flow — unlocks
+                    // nothing, so it's the lower-risk pattern under Apple's
+                    // in-app purchase rules (3.1.1). A payment flow embedded in
+                    // the app itself would need StoreKit instead.
+                    Link(destination: URL(string: "https://venmo.com/u/ravenrealms")!) {
+                        Label("Donate via Venmo", systemImage: "heart.fill")
                     }
                 }
 

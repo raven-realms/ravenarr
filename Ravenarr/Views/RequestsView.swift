@@ -61,6 +61,9 @@ struct RequestsView: View {
             }
             .background(SeerrTheme.background.ignoresSafeArea())
             .navigationTitle("Requests")
+            .navigationDestination(for: MediaResult.self) { item in
+                MediaDetailView(item: item)
+            }
             .refreshable { await load() }
             .task { await load() }
             .onChange(of: filter) { _, _ in Task { await load() } }
@@ -111,33 +114,13 @@ private struct RequestRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            AsyncImage(url: details?.posterURL) { image in
-                image.resizable().aspectRatio(2 / 3, contentMode: .fill)
-            } placeholder: {
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(.gray.opacity(0.2))
-                    .overlay(
-                        Image(systemName: request.media?.mediaType == .tv ? "tv" : "film")
-                            .foregroundStyle(.secondary)
-                    )
-            }
-            .frame(width: 46, height: 69)
-            .clipShape(RoundedRectangle(cornerRadius: 6))
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(details?.displayTitle ?? (request.media?.mediaType.rawValue.capitalized ?? "Request"))
-                    .font(.headline)
-                    .foregroundStyle(.white)
-
-                Label(request.approvalStatus.label, systemImage: request.approvalStatus.icon)
-                    .font(.subheadline)
-                    .foregroundStyle(color(for: request.approvalStatus))
-
-                if let requestedBy = request.requestedBy?.displayName {
-                    Text("Requested by \(requestedBy)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+            if let tmdbId = request.media?.tmdbId {
+                NavigationLink(value: mediaResult(tmdbId: tmdbId)) {
+                    posterAndTitle
                 }
+                .buttonStyle(.plain)
+            } else {
+                posterAndTitle
             }
 
             Spacer()
@@ -166,6 +149,54 @@ private struct RequestRow: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private var posterAndTitle: some View {
+        HStack(alignment: .top, spacing: 12) {
+            AsyncImage(url: details?.posterURL) { image in
+                image.resizable().aspectRatio(2 / 3, contentMode: .fill)
+            } placeholder: {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(.gray.opacity(0.2))
+                    .overlay(
+                        Image(systemName: request.media?.mediaType == .tv ? "tv" : "film")
+                            .foregroundStyle(.secondary)
+                    )
+            }
+            .frame(width: 46, height: 69)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(details?.displayTitle ?? (request.media?.mediaType.rawValue.capitalized ?? "Request"))
+                    .font(.headline)
+                    .foregroundStyle(.white)
+
+                Label(request.approvalStatus.label, systemImage: request.approvalStatus.icon)
+                    .font(.subheadline)
+                    .foregroundStyle(color(for: request.approvalStatus))
+
+                if let requestedBy = request.requestedBy?.displayName {
+                    Text("Requested by \(requestedBy)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private func mediaResult(tmdbId: Int) -> MediaResult {
+        MediaResult(
+            id: tmdbId,
+            mediaType: request.media?.mediaType ?? .movie,
+            title: details?.title,
+            name: details?.name,
+            overview: details?.overview,
+            posterPath: details?.posterPath,
+            releaseDate: details?.releaseDate,
+            firstAirDate: details?.firstAirDate,
+            mediaInfo: nil
+        )
     }
 
     private func color(for status: RequestApprovalStatus) -> Color {
