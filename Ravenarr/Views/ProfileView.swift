@@ -95,6 +95,16 @@ struct ProfileView: View {
                     }
                 }
 
+                Section("Support Ravenarr") {
+                    // Plain external link, not an in-app payment flow — unlocks
+                    // nothing, so it's the lower-risk pattern under Apple's
+                    // in-app purchase rules (3.1.1). A payment flow embedded in
+                    // the app itself would need StoreKit instead.
+                    Link(destination: URL(string: "https://venmo.com/u/ravenrealms")!) {
+                        Label("Donate via Venmo", systemImage: "heart.fill")
+                    }
+                }
+
                 Section {
                     Button("Add Another Server") {
                         showAddServer = true
