@@ -82,6 +82,11 @@ struct MediaDetails: Decodable {
     let voteAverage: Double?
     let mediaInfo: MediaInfo?
 
+    /// Movie-only: content certification (PG-13, R, ...) by country.
+    let releases: MovieReleases?
+    /// TV-only: content rating (TV-14, TV-MA, ...) by country.
+    let contentRatings: TVContentRatings?
+
     var displayTitle: String { title ?? name ?? "Untitled" }
     var displayDate: String? { releaseDate ?? firstAirDate }
 
@@ -89,6 +94,58 @@ struct MediaDetails: Decodable {
         guard let posterPath else { return nil }
         return URL(string: "https://image.tmdb.org/t/p/w342\(posterPath)")
     }
+
+    /// US parental-guidance rating (PG-13, TV-MA, etc.) — distinct from
+    /// `voteAverage`, which is TMDB's 0-10 popularity score, not a content
+    /// rating. nil if TMDB has no US rating on file for this title.
+    var certification: String? {
+        if let movieCert = releases?.results
+            .first(where: { $0.iso31661 == "US" })?
+            .releaseDates
+            .first(where: { !$0.certification.isEmpty })?
+            .certification {
+            return movieCert
+        }
+        if let tvRating = contentRatings?.results
+            .first(where: { $0.iso31661 == "US" })?
+            .rating,
+            !tvRating.isEmpty {
+            return tvRating
+        }
+        return nil
+    }
+}
+
+struct MovieReleaseDate: Decodable {
+    let certification: String
+}
+
+struct MovieReleaseCountry: Decodable {
+    let iso31661: String
+    let releaseDates: [MovieReleaseDate]
+
+    enum CodingKeys: String, CodingKey {
+        case iso31661 = "iso_3166_1"
+        case releaseDates = "release_dates"
+    }
+}
+
+struct MovieReleases: Decodable {
+    let results: [MovieReleaseCountry]
+}
+
+struct TVContentRatingCountry: Decodable {
+    let iso31661: String
+    let rating: String
+
+    enum CodingKeys: String, CodingKey {
+        case iso31661 = "iso_3166_1"
+        case rating
+    }
+}
+
+struct TVContentRatings: Decodable {
+    let results: [TVContentRatingCountry]
 }
 
 /// Lighter than `MediaResult` on purpose: /movie|tv/{id}/recommendations
