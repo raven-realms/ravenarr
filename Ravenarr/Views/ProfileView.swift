@@ -6,6 +6,12 @@ struct ProfileView: View {
     @State private var relayURLText = ""
     @State private var relayAPIKeyText = ""
     @State private var showAddServer = false
+    @State private var showSavedConfirmation = false
+
+    private enum Field {
+        case relayURL, relayAPIKey
+    }
+    @FocusState private var focusedField: Field?
 
     var body: some View {
         NavigationStack {
@@ -69,16 +75,34 @@ struct ProfileView: View {
                         .keyboardType(.URL)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
+                        .submitLabel(.next)
+                        .focused($focusedField, equals: .relayURL)
+                        .onSubmit { focusedField = .relayAPIKey }
 
                     SecureField("Relay API Key (if required)", text: $relayAPIKeyText)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
+                        .submitLabel(.done)
+                        .focused($focusedField, equals: .relayAPIKey)
+                        .onSubmit { focusedField = nil }
 
                     Button("Save Relay Settings") {
+                        focusedField = nil
                         appState.setPushRelayURL(URL(string: relayURLText))
                         appState.setPushRelayAPIKey(relayAPIKeyText.isEmpty ? nil : relayAPIKeyText)
+                        showSavedConfirmation = true
+                        Task {
+                            try? await Task.sleep(nanoseconds: 2_000_000_000)
+                            showSavedConfirmation = false
+                        }
                     }
                     .disabled(relayURLText.trimmingCharacters(in: .whitespaces).isEmpty)
+
+                    if showSavedConfirmation {
+                        Label("Saved", systemImage: "checkmark.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.green)
+                    }
 
                     Text("Address of a relay that forwards Seerr's webhook events to Apple Push — your own self-hosted one, or a key you were issued for a hosted service. Leave both blank if you haven't set one up yet.")
                         .font(.caption)
@@ -116,6 +140,12 @@ struct ProfileView: View {
             }
             .seerrBackground()
             .navigationTitle("Profile")
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { focusedField = nil }
+                }
+            }
             .onAppear {
                 relayURLText = appState.serverStore.activeServer?.pushRelayURL?.absoluteString ?? ""
             }

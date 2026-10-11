@@ -50,6 +50,16 @@ struct MediaDetailView: View {
                             .font(.subheadline)
                             .foregroundStyle(.yellow)
                     }
+                    if let certification = details?.certification {
+                        Text(certification)
+                            .font(.caption.bold())
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(.secondary, lineWidth: 1)
+                            )
+                    }
                 }
 
                 if let overview {
