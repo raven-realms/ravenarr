@@ -204,6 +204,8 @@ private struct RequestRow: View {
         case .pending: return .orange
         case .approved: return .green
         case .declined: return .red
+        case .failed: return .red
+        case .completed: return .green
         }
     }
 }

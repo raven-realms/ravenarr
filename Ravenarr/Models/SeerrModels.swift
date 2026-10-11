@@ -62,8 +62,21 @@ struct MediaResult: Decodable, Identifiable {
 }
 
 struct MediaInfo: Decodable {
+    /// Seerr's own internal media row id — NOT the TMDB id. Required to
+    /// report an issue (POST /api/v1/issue wants this, not tmdbId). Only
+    /// present once the title has actually been requested/is on the server,
+    /// which is also exactly when reporting an issue makes sense.
+    let id: Int?
     let status: RequestStatus?
     let requests: [MediaRequest]?
+}
+
+/// A trailer/clip/etc. from TMDB, passed through by Seerr's `relatedVideos`.
+struct RelatedVideo: Decodable {
+    let key: String
+    let site: String
+    let type: String
+    let name: String
 }
 
 /// Requests/issues only store `tmdbId` + `mediaType` locally — title, poster,
@@ -87,12 +100,22 @@ struct MediaDetails: Decodable {
     /// TV-only: content rating (TV-14, TV-MA, ...) by country.
     let contentRatings: TVContentRatings?
 
+    let relatedVideos: [RelatedVideo]?
+
     var displayTitle: String { title ?? name ?? "Untitled" }
     var displayDate: String? { releaseDate ?? firstAirDate }
 
     var posterURL: URL? {
         guard let posterPath else { return nil }
         return URL(string: "https://image.tmdb.org/t/p/w342\(posterPath)")
+    }
+
+    /// First YouTube trailer, same as the web UI's "Watch Trailer" button.
+    var trailerURL: URL? {
+        guard let key = relatedVideos?.first(where: { $0.site == "YouTube" && $0.type == "Trailer" })?.key else {
+            return nil
+        }
+        return URL(string: "https://www.youtube.com/watch?v=\(key)")
     }
 
     /// US parental-guidance rating (PG-13, TV-MA, etc.) — distinct from
@@ -248,12 +271,21 @@ enum RequestApprovalStatus: Int, Codable, Hashable {
     case pending = 1
     case approved = 2
     case declined = 3
+    case failed = 4
+    /// Approved and fully downloaded/available — NOT "still pending". Verified
+    /// against Overseerr's own MediaRequestStatus enum after a report that
+    /// completed requests were mislabeled "Pending Approval": this case was
+    /// simply missing, so `RequestApprovalStatus(rawValue:)` returned nil and
+    /// silently fell back to `.pending` for every completed request.
+    case completed = 5
 
     var label: String {
         switch self {
         case .pending: return "Pending Approval"
         case .approved: return "Approved"
         case .declined: return "Declined"
+        case .failed: return "Failed"
+        case .completed: return "Completed"
         }
     }
 
@@ -262,6 +294,8 @@ enum RequestApprovalStatus: Int, Codable, Hashable {
         case .pending: return "clock.fill"
         case .approved: return "checkmark.circle.fill"
         case .declined: return "xmark.circle.fill"
+        case .failed: return "exclamationmark.triangle.fill"
+        case .completed: return "checkmark.seal.fill"
         }
     }
 }

@@ -246,6 +246,27 @@ final class SeerrAPIClient {
         _ = try await rawRequest(path: "api/v1/issue/\(issueID)/\(action)", method: "POST", body: Optional<String>.none)
     }
 
+    /// `mediaId` must be Seerr's own internal media row id (`MediaInfo.id`),
+    /// NOT the TMDB id — verified against Overseerr's own route/entity source.
+    @discardableResult
+    func createIssue(
+        mediaId: Int,
+        issueType: IssueType,
+        message: String,
+        problemSeason: Int? = nil,
+        problemEpisode: Int? = nil
+    ) async throws -> SeerrIssue {
+        struct Body: Encodable {
+            let mediaId: Int
+            let issueType: Int
+            let message: String
+            let problemSeason: Int?
+            let problemEpisode: Int?
+        }
+        let body = Body(mediaId: mediaId, issueType: issueType.rawValue, message: message, problemSeason: problemSeason, problemEpisode: problemEpisode)
+        return try await request(path: "api/v1/issue", method: "POST", body: body)
+    }
+
     // MARK: - Generic request helpers
 
     private func request<T: Decodable>(path: String, method: String = "GET", query: [String: String] = [:]) async throws -> T {
