@@ -11,6 +11,8 @@ struct MediaDetailView: View {
     @State private var requestSucceeded = false
     @State private var showRequestOptions = false
     @State private var collection: CollectionSummary?
+    @State private var showReportIssue = false
+    @State private var issueReportedMessage: String?
 
     /// Prefer the freshly-fetched details once they land; `item` is just the
     /// instantly-available placeholder (from Discover/search, or a bare
@@ -62,6 +64,12 @@ struct MediaDetailView: View {
                     }
                 }
 
+                if let trailerURL = details?.trailerURL {
+                    Link(destination: trailerURL) {
+                        Label("Watch Trailer", systemImage: "play.rectangle.fill")
+                    }
+                }
+
                 if let overview {
                     Text(overview)
                         .font(.body)
@@ -75,6 +83,10 @@ struct MediaDetailView: View {
                 }
 
                 requestSection
+
+                if let mediaId = details?.mediaInfo?.id {
+                    reportIssueSection(mediaId: mediaId)
+                }
 
                 if !recommendations.isEmpty {
                     recommendationsSection
@@ -93,9 +105,33 @@ struct MediaDetailView: View {
                 Task { await sendRequest(seasons: seasons, is4k: is4k) }
             }
         }
+        .sheet(isPresented: $showReportIssue) {
+            if let mediaId = details?.mediaInfo?.id {
+                ReportIssueSheet(item: item, mediaId: mediaId) {
+                    issueReportedMessage = "Issue reported — thanks!"
+                }
+            }
+        }
         .task {
             await loadDetails()
         }
+    }
+
+    @ViewBuilder
+    private func reportIssueSection(mediaId: Int) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Button {
+                showReportIssue = true
+            } label: {
+                Label("Report an Issue", systemImage: "exclamationmark.triangle")
+            }
+            if let issueReportedMessage {
+                Text(issueReportedMessage)
+                    .font(.caption)
+                    .foregroundStyle(.green)
+            }
+        }
+        .padding(.top, 4)
     }
 
     @ViewBuilder

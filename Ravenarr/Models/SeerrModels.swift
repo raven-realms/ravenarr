@@ -62,8 +62,21 @@ struct MediaResult: Decodable, Identifiable {
 }
 
 struct MediaInfo: Decodable {
+    /// Seerr's own internal media row id — NOT the TMDB id. Required to
+    /// report an issue (POST /api/v1/issue wants this, not tmdbId). Only
+    /// present once the title has actually been requested/is on the server,
+    /// which is also exactly when reporting an issue makes sense.
+    let id: Int?
     let status: RequestStatus?
     let requests: [MediaRequest]?
+}
+
+/// A trailer/clip/etc. from TMDB, passed through by Seerr's `relatedVideos`.
+struct RelatedVideo: Decodable {
+    let key: String
+    let site: String
+    let type: String
+    let name: String
 }
 
 /// Requests/issues only store `tmdbId` + `mediaType` locally — title, poster,
@@ -87,12 +100,22 @@ struct MediaDetails: Decodable {
     /// TV-only: content rating (TV-14, TV-MA, ...) by country.
     let contentRatings: TVContentRatings?
 
+    let relatedVideos: [RelatedVideo]?
+
     var displayTitle: String { title ?? name ?? "Untitled" }
     var displayDate: String? { releaseDate ?? firstAirDate }
 
     var posterURL: URL? {
         guard let posterPath else { return nil }
         return URL(string: "https://image.tmdb.org/t/p/w342\(posterPath)")
+    }
+
+    /// First YouTube trailer, same as the web UI's "Watch Trailer" button.
+    var trailerURL: URL? {
+        guard let key = relatedVideos?.first(where: { $0.site == "YouTube" && $0.type == "Trailer" })?.key else {
+            return nil
+        }
+        return URL(string: "https://www.youtube.com/watch?v=\(key)")
     }
 
     /// US parental-guidance rating (PG-13, TV-MA, etc.) — distinct from
