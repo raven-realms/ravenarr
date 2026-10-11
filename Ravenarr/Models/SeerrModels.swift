@@ -271,12 +271,21 @@ enum RequestApprovalStatus: Int, Codable, Hashable {
     case pending = 1
     case approved = 2
     case declined = 3
+    case failed = 4
+    /// Approved and fully downloaded/available — NOT "still pending". Verified
+    /// against Overseerr's own MediaRequestStatus enum after a report that
+    /// completed requests were mislabeled "Pending Approval": this case was
+    /// simply missing, so `RequestApprovalStatus(rawValue:)` returned nil and
+    /// silently fell back to `.pending` for every completed request.
+    case completed = 5
 
     var label: String {
         switch self {
         case .pending: return "Pending Approval"
         case .approved: return "Approved"
         case .declined: return "Declined"
+        case .failed: return "Failed"
+        case .completed: return "Completed"
         }
     }
 
@@ -285,6 +294,8 @@ enum RequestApprovalStatus: Int, Codable, Hashable {
         case .pending: return "clock.fill"
         case .approved: return "checkmark.circle.fill"
         case .declined: return "xmark.circle.fill"
+        case .failed: return "exclamationmark.triangle.fill"
+        case .completed: return "checkmark.seal.fill"
         }
     }
 }
