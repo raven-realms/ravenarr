@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build
+        run: |
+          xcodebuild build \
+            -project Ravenarr.xcodeproj \
+            -scheme Ravenarr \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO
+
+      - name: Pick an available simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available iPhone -j \
+            | python3 -c "import json,sys; data=json.load(sys.stdin)['devices']; udids=[d['udid'] for runtime in data.values() for d in runtime if 'iPhone' in d['name']]; print(udids[0] if udids else '')")
+          if [ -z "$UDID" ]; then
+            echo "No available iPhone simulator found" >&2
+            exit 1
+          fi
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      - name: Test
+        run: |
+          xcodebuild test \
+            -project Ravenarr.xcodeproj \
+            -scheme Ravenarr \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO

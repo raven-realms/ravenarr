@@ -36,3 +36,24 @@ targets:
           CODE_SIGN_ENTITLEMENTS: Ravenarr/Ravenarr.entitlements
         Release:
           CODE_SIGN_ENTITLEMENTS: Ravenarr/Ravenarr-Release.entitlements
+  RavenarrTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: RavenarrTests
+    settings:
+      base:
+        SWIFT_VERSION: "5.0"
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: Ravenarr
+schemes:
+  Ravenarr:
+    build:
+      targets:
+        Ravenarr: all
+        RavenarrTests: [test]
+    test:
+      targets:
+        - RavenarrTests
